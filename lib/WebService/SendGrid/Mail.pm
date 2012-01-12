@@ -1,15 +1,20 @@
 package WebService::SendGrid::Mail;
+# ABSTRACT: An email class for sending a message through SendGrid
 use Moose;
+use Moose::Util::TypeConstraints;
 use MooseX::Method::Signatures;
+use namespace::autoclean;
 
-extends 'SendGrid';
+extends 'WebService::SendGrid';
 
 use URI;
 use Carp;
 use JSON::XS;
 use Data::Show;
-use Util::Types qw(Email);
 use DateTime::Format::Mail;
+
+use Mail::RFC822::Address qw(valid);
+subtype 'Email', as 'Str', where { valid($_) };
 
 has 'to' => ( is => 'rw', isa => 'Email | ArrayRef[Email]', required => 1 );
 has 'toname' => ( is => 'rw', isa => 'Str | ArrayRef', required => 0 );
@@ -20,6 +25,7 @@ has 'replyto' => ( is => 'rw', isa => 'Email', required => 0 );
 has 'x-smtpapi' => ( is => 'rw', isa => 'Str', required => 0 );
 has 'subject' => ( is => 'rw', isa => 'Str', required => 1 );
 has 'files' => ( is => 'rw', isa => 'HashRef', required => 0 ); 
+# Must be less than 7MB
 # files[file1.doc]=example.doc&files[file2.pdf]=example.pdf
 has 'headers' => ( is => 'rw', isa => 'HashRef', required => 0 );
 # A collection of key/value pairs in JSON format
@@ -30,10 +36,9 @@ has 'date' => ( is => 'rw', isa => 'Str', required => 1, default => sub {
 has 'text' => ( is => 'rw', isa => 'Str', required => 0 );
 has 'html' => ( is => 'rw', isa => 'Str', required => 0 );
 
-
 method send {
-	# must have text and/or HTML
-	croak "No content" unless ( $self->text || $self->html );
+  # must have text and/or HTML
+  croak "No content" unless ( $self->text || $self->html );
 
   my %data;	
 	for my $attr ( $self->meta->get_all_attributes ) {
@@ -42,26 +47,32 @@ method send {
 	  $data{$name} = $self->$name if $self->$name;
 	}
 	
-	$data{$_} = $self->$_ for qw(api_user api_key);
-	
-	my $uri = URI->new('http:');
-	$uri->query_form(%data);
-	
-	my $req = HTTP::Request->new;
-	$req->method('POST');
-	$req->uri($self->api_uri);
-	$req->content($uri->query);
-	
-	# if the module is being called from a test file
-	# always send a successful response
-	my ($package, $filename, $line) = caller;
-	return { message => 'success' } if $filename =~ /\.t$/;
-	
-	my $res = $self->http_request($req);
+	my $req = $self->_generate_request('/api/mail.send.json', \%data);
+  my $res = $self->_dispatch_request($req);
+	return $self->_process_error($res) if $res->code != 200;
 	my $content = decode_json $res->content;
-	return $res->code == 200 ? $content : undef;
-	
 	
 }
 
 1;
+
+=head1 SYNOPSIS
+
+  use WebService::SendGrid::Mail;
+  my $mail = WebService::SendGrid::Mail->new(
+    api_user =>  'jlloyd', # same username for logging into the website
+    api_key => 'abcdefgh123456789', # same password for logging into the website
+    to => 'jlloyd@cpan.org',
+    from => 'jlloyd@cpan.org',
+    subject => 'This is a test',
+    text => 'This is a test message',
+    html => '<html><head></head><body>This is a test HTML message</body></html>'
+  );
+  
+  $mail->send;
+
+1;
+
+=head1 DESCRIPTION
+
+Allows you to send an email through the SendGrid Web API
