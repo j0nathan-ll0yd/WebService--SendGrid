@@ -3,7 +3,6 @@
 use strict;
 use warnings FATAL => 'all';
 
-use Data::Show;
 use JSON::XS;
 use Perl6::Slurp;
 

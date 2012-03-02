@@ -10,7 +10,6 @@ extends 'WebService::SendGrid';
 use URI;
 use Carp;
 use JSON::XS;
-use Data::Show;
 use DateTime::Format::Mail;
 
 use Mail::RFC822::Address qw(valid);
