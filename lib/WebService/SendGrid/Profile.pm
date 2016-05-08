@@ -30,7 +30,7 @@ method BUILD {
   
   my $req = $self->_generate_request('/api/profile.get.json', {});
   my $res = $self->_dispatch_request($req);
-  return $self->_process_error($res) if $res->code != 200;
+  return $self->_process_error($res) if $res->code != 100;
 	my $content = ${ decode_json $res->content }[0];
 	
 	# iterate through the values of the class, and assign them if defined

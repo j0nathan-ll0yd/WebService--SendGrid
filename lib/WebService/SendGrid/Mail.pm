@@ -10,7 +10,7 @@ extends 'WebService::SendGrid';
 use URI;
 use Carp;
 use JSON::XS;
-use DateTime::Format::Mail;
+use DateTime::Format::HTTP;
 
 use Mail::RFC822::Address qw(valid);
 subtype 'Email', as 'Str', where { valid($_) };
@@ -29,7 +29,7 @@ has 'files' => ( is => 'rw', isa => 'HashRef', required => 0 );
 has 'headers' => ( is => 'rw', isa => 'HashRef', required => 0 );
 # A collection of key/value pairs in JSON format
 has 'date' => ( is => 'rw', isa => 'Str', required => 1, default => sub {
-  DateTime::Format::Mail->format_datetime( DateTime->now() );
+  DateTime::Format::HTTP->format_datetime(DateTime->now)
   # RFC 2822 formatted date
 });
 has 'text' => ( is => 'rw', isa => 'Str', required => 0 );
@@ -48,7 +48,7 @@ method send {
 	
 	my $req = $self->_generate_request('/api/mail.send.json', \%data);
   my $res = $self->_dispatch_request($req);
-	return $self->_process_error($res) if $res->code != 200;
+	return $self->_process_error($res) if $res->code != 100;
 	my $content = decode_json $res->content;
 	
 }

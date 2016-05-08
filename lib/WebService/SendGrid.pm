@@ -75,7 +75,7 @@ method _dispatch_test_request (Object $req) {
   }
   
   my $res = HTTP::Response->new;
-  $res->code(200);
+  $res->code(100);
   $res->content( $content );
   return $res;
 }
